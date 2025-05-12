@@ -1,9 +1,12 @@
-import numpy as np # type: ignore
-import matplotlib.pyplot as plt # type: ignore
-from matplotlib.patches import Circle, Arrow # type: ignore
-from typing import Tuple, Dict, Any, Optional # type: ignore
-from src.sailing_physics import calculate_sailing_efficiency # type: ignore
-import gymnasium as gym # type: ignore
+from typing import Any, Dict, Optional, Tuple  # type: ignore
+
+import gymnasium as gym  # type: ignore
+import matplotlib.pyplot as plt  # type: ignore
+import numpy as np  # type: ignore
+from matplotlib.patches import Arrow, Circle  # type: ignore
+
+from src.sailing_physics import calculate_sailing_efficiency  # type: ignore
+
 
 class SailingEnv(gym.Env): # type: ignore
     """
@@ -121,6 +124,50 @@ class SailingEnv(gym.Env): # type: ignore
         """Set the seed for the environment's random number generator."""
         self.np_random = np.random.default_rng(seed)
         return [seed]
+    
+    def sample_near_goal(self, variance=10):
+        """
+        Génére un point aléatoire proche du but avec une certaine variance.
+        :param goal: Le but (x, y).
+        :param variance: La variance (écart maximum) autour du but.
+        :return: Un état aléatoire proche du but.
+        """
+        noise_x = np.random.normal(0, variance)
+        noise_y = np.abs(np.random.normal(0, variance))
+        return np.clip(self.goal_position + np.array([noise_x, -noise_y]), [0, 0], 
+            [self.grid_size[0]-1, self.grid_size[1]-1]).astype(np.int64)
+
+    def reset_close(self, seed=None, variance=10):
+        """Reset the environment to a state close to the goal."""
+        # Initialize or reset the random number generator
+        self.seed(seed)
+        
+        # Generate a random position close to the goal
+        self.position = self.sample_near_goal(variance=variance)
+        
+        # Reset velocity and position accumulator
+        self.velocity = np.array([0.0, 0.0])
+        self.position_accumulator = np.array([0.0, 0.0])
+        
+        # Reset step count and last action
+        self.step_count = 0
+        self.last_action = None
+        
+        # Generate new wind field
+        self.wind_field = self._generate_wind_field()
+        
+        # Get initial observation
+        observation = self._get_observation()
+        
+        # Get info
+        info = {
+            'position': self.position,
+            'velocity': self.velocity,
+            'wind': self._get_wind_at_position(self.position),
+            'step': self.step_count
+        }
+        
+        return observation, info
         
     def reset(self, seed=None, options=None):
         """Reset the environment to its initial state."""
@@ -226,7 +273,7 @@ class SailingEnv(gym.Env): # type: ignore
         reward = self._calculate_reward(reached_goal, distance_to_goal)
         
         # Determine if episode is done
-        terminated = reached_goal or self.step_count >= 1000  # Increased from 200 to 1000
+        terminated = reached_goal or self.step_count >= 200  # Increased from 200 to 1000 # Back to 500 for testing
         truncated = False  # We don't truncate episodes
         
         # Only update wind field if static_wind is False
@@ -344,7 +391,8 @@ class SailingEnv(gym.Env): # type: ignore
             4: "South",
             5: "Southwest",
             6: "West",
-            7: "Northwest"
+            7: "Northwest",
+            8: "Stay"
         }
         action_str = action_names.get(self.last_action, "None")
         info_text = (

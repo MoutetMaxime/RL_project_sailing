@@ -5,7 +5,16 @@ These functions help create standalone Python files for agent submission.
 """
 
 import os
-import numpy as np # type: ignore
+
+import numpy as np  # type: ignore
+
+
+def pi_uniform(s):
+  return np.random.randint(0, 9)
+
+def pi_naive(s):
+    return 0
+
 
 def save_qlearning_agent(agent, output_path, agent_class_name="QLearningTrainedAgent"):
     """

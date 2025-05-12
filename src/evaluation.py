@@ -5,17 +5,20 @@ This module provides functions for evaluating and visualizing the performance
 of sailing agents in the sailing environment.
 """
 
-import numpy as np # type: ignore
-import matplotlib.pyplot as plt # type: ignore
-from matplotlib.patches import Circle, Polygon # type: ignore
-from IPython.display import display # type: ignore
-import ipywidgets as widgets # type: ignore
-from typing import List, Dict, Any, Tuple, Optional, Union, Callable # type: ignore
 import copy  # Add copy module for deep copying
-from env_sailing import SailingEnv
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union  # type: ignore
+
+import ipywidgets as widgets  # type: ignore
+import matplotlib.pyplot as plt  # type: ignore
+import numpy as np  # type: ignore
+from IPython.display import clear_output  # type: ignore
+from IPython.display import display  # type: ignore
+from matplotlib.patches import Circle, Polygon  # type: ignore
+from tqdm.notebook import tqdm  # type: ignore
+
 from agents.base_agent import BaseAgent
-from IPython.display import clear_output # type: ignore
-from tqdm.notebook import tqdm # type: ignore
+from env_sailing import SailingEnv
+
 
 def evaluate_agent(
     agent: BaseAgent,
@@ -24,7 +27,8 @@ def evaluate_agent(
     max_horizon: int = 1000,
     verbose: bool = False,
     render: bool = False,
-    full_trajectory: bool = False
+    full_trajectory: bool = False,
+    close: bool = False
 ) -> Dict[str, Any]:
     """Evaluate an agent on a specific initial windfield with given seeds.
     
@@ -75,7 +79,10 @@ def evaluate_agent(
         # Reset environment and agent
         env.seed(seed)
         agent.seed(seed)
-        observation, _ = env.reset(seed=seed)  # Explicitly pass seed to reset
+        if close:
+            observation, _ = env.reset_close(seed=seed)  # Explicitly pass seed to reset
+        else:
+            observation, _ = env.reset(seed=seed)  # Explicitly pass seed to reset
         agent.reset()
         
         # Initialize episode variables
@@ -177,7 +184,7 @@ def visualize_trajectory(
     frames = results['frames']
     
     if with_slider:
-        from ipywidgets import interact, IntSlider # type: ignore
+        from ipywidgets import IntSlider, interact  # type: ignore
         
         def show_frame(frame_idx):
             plt.figure(figsize=(10, 10))
